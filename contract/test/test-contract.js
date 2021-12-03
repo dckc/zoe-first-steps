@@ -8,43 +8,51 @@ import bundleSource from '@agoric/bundle-source';
 import { E } from '@agoric/eventual-send';
 import { makeFakeVatAdmin } from '@agoric/zoe/tools/fakeVatAdmin.js';
 import { makeZoeKit } from '@agoric/zoe';
-import { AmountMath } from '@agoric/ertp';
 
 const filename = new URL(import.meta.url).pathname;
 const dirname = path.dirname(filename);
 
 const contractPath = `${dirname}/../src/contract.js`;
 
-test('zoe - mint payments', async (t) => {
+test('zoe - points for primes', async (t) => {
   const { zoeService } = makeZoeKit(makeFakeVatAdmin().admin);
   const feePurse = E(zoeService).makeFeePurse();
   const zoe = E(zoeService).bindDefaultFeePurse(feePurse);
 
-  // pack the contract
   const bundle = await bundleSource(contractPath);
-
-  // install the contract
   const installation = E(zoe).install(bundle);
 
-  const { creatorFacet, instance } = await E(zoe).startInstance(installation);
+  const { publicFacet, instance } = await E(zoe).startInstance(installation);
 
-  // Alice makes an invitation for Bob that will give him 1000 tokens
-  const invitation = E(creatorFacet).makeInvitation();
+  const play = async (guess, reward) => {
+    const invitation = await E(publicFacet).makeInvitation();
 
-  // Bob makes an offer using the invitation
-  const seat = E(zoe).offer(invitation);
+    const seat = E(zoe).offer(
+      invitation,
+      undefined,
+      undefined,
+      harden({ guess }),
+    );
+    const actual = await E(seat).getOfferResult();
+    t.is(actual, reward > 0n ? 'win' : 'guess again');
 
-  const paymentP = E(seat).getPayout('Token');
+    if (!reward) {
+      t.log({ guess, result: actual });
+      return;
+    }
 
-  // Let's get the tokenIssuer from the contract so we can evaluate
-  // what we get as our payout
-  const publicFacet = E(zoe).getPublicFacet(instance);
-  const tokenIssuer = E(publicFacet).getTokenIssuer();
-  const tokenBrand = await E(tokenIssuer).getBrand();
+    const {
+      issuers: { Award: awardIssuer },
+      brands: { Award: awardBrand },
+    } = await E(zoe).getTerms(instance);
+    const myPoints = await E(seat).getPayout('Award');
+    const howMuch = await E(awardIssuer).getAmountOf(myPoints);
 
-  const tokens1000 = AmountMath.make(tokenBrand, 1000n);
-  const tokenPayoutAmount = await E(tokenIssuer).getAmountOf(paymentP);
-
-  // Bob got 1000 tokens
-  t.deepEqual(tokenPayoutAmount, tokens1000);
+    t.log({ guess, result: actual, value: howMuch.value });
+    t.deepEqual(howMuch, { brand: awardBrand, value: reward });
+  };
+  await play(2n, 1n);
+  await play(3n, 2n);
+  await play(4n, undefined);
+  await play(5n, 3n);
 });
