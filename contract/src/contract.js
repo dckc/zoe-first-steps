@@ -1,5 +1,4 @@
 // @ts-check
-import '@agoric/zoe/exported.js';
 import { Far } from '@agoric/marshal';
 
 const start = async (zcf) => {
