@@ -12,7 +12,7 @@ import { makeZoeKit } from '@agoric/zoe';
 const filename = new URL(import.meta.url).pathname;
 const dirname = path.dirname(filename);
 
-const contractPath = `${dirname}/../src/contract.js`;
+const contractPath = `${dirname}/../src/points-for-primes.js`;
 
 test('zoe - points for primes', async (t) => {
   const { zoeService } = makeZoeKit(makeFakeVatAdmin().admin);
