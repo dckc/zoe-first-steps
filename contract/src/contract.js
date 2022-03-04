@@ -1,16 +1,14 @@
-// @ts-check
-import { Far } from '@agoric/marshal';
+// @jessie-check
+import { Far } from '@endo/far';
 
-const start = async (_zcf) => {
+export const start = (_zcf) => {
   let value = 'Hello, World!';
-  const creatorFacet = Far('hello', {
-    set: (v) => (value = v),
-  });
-  const publicFacet = Far('hello', {
+  const publicFacet = Far('Getter', {
     get: () => value,
+  });
+  const creatorFacet = Far('Setter', {
+    set: (v) => (value = v),
   });
   return harden({ creatorFacet, publicFacet });
 };
-
 harden(start);
-export { start };
